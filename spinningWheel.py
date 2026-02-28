@@ -2,8 +2,10 @@ import tkinter as tk
 import math
 import random
 import cv2
+import threading
 from PIL import Image, ImageTk
 from combinedMsg import TypeWriterApp
+from transformers import pipeline
 
 class ChallengeWheel:
     def __init__(self, root):
@@ -13,6 +15,10 @@ class ChallengeWheel:
         self.root.configure(bg="#8ACE00")
         self.root.overrideredirect(True)
         
+        # Load AI model in background to prevent UI freezing
+        self.classifier = None
+        threading.Thread(target=self.load_model, daemon=True).start()
+
         # Universal Escape key bind to close the app safely
         self.root.bind("<Escape>", lambda e: self.close_app())
 
@@ -45,6 +51,9 @@ class ChallengeWheel:
         self.result_label.pack(pady=10)
 
         self.draw_wheel()
+
+    def load_model(self):
+        self.classifier = pipeline("zero-shot-image-classification", model="openai/clip-vit-base-patch32")
 
     def draw_wheel(self):
         self.canvas.delete("slice")
@@ -117,7 +126,6 @@ class ChallengeWheel:
         self.timer_label = tk.Label(self.root, text="00:00", font=("Arial", 28, "bold"), bg="#8ACE00", fg="black")
         self.timer_label.pack(pady=5)
 
-        # Camera Frame Setup
         self.cam_frame = tk.Frame(self.root, width=400, height=280, bg="black")
         self.cam_frame.pack(pady=10)
         self.cam_frame.pack_propagate(False)
@@ -131,9 +139,9 @@ class ChallengeWheel:
         self.status_label = tk.Label(self.root, text="Ready to capture...", font=("Arial", 16, "bold"), bg="#8ACE00", fg="black", wraplength=450)
         self.status_label.pack(pady=10)
 
-        # Initialize Camera
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         self.camera_running = True
+        self.current_img = None
         self.update_camera_frame()
 
         self.timer_running = True
@@ -146,10 +154,10 @@ class ChallengeWheel:
         success, frame = self.cap.read()
         if success:
             frame = cv2.flip(frame, 1)
-            frame = cv2.resize(frame, (400, 280)) # Resize to fit frame
+            frame = cv2.resize(frame, (400, 280))
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img = Image.fromarray(frame_rgb)
-            imgtk = ImageTk.PhotoImage(image=img)
+            self.current_img = Image.fromarray(frame_rgb)
+            imgtk = ImageTk.PhotoImage(image=self.current_img)
             self.video_label.imgtk = imgtk
             self.video_label.configure(image=imgtk)
             
@@ -164,35 +172,49 @@ class ChallengeWheel:
         self.root.after(1000, self.update_timer)
 
     def take_picture(self):
+        if not self.current_img:
+            return
+
         self.timer_running = False
-        self.camera_running = False # Freezes the last frame on screen
+        self.camera_running = False 
         self.capture_btn.config(state=tk.DISABLED)
         
         self.status_label.config(text="ANALYZING IMAGE...", fg="blue")
         self.status_label.update_idletasks()
-        self.root.update_idletasks()
         
-        self.root.after(1500, self.display_fake_percentage)
+        self.root.after(100, self.analyze_image)
 
-    def display_fake_percentage(self):
-        accuracy = random.uniform(90.12, 97.67)
-        self.status_label.config(text=f"GRASS DETECTED: {accuracy:.2f}%", fg="green")
-        self.status_label.update_idletasks()
-        self.root.update_idletasks()
+    def analyze_image(self):
+        if self.classifier is None:
+            self.status_label.config(text="LOADING AI MODEL... PLEASE WAIT", fg="orange")
+            self.root.after(1000, self.analyze_image)
+            return
+
+        # Run real classification
+        results = self.classifier(self.current_img, candidate_labels=["grass", "not grass"])
         
+        grass_score = next((item['score'] for item in results if item['label'] == 'grass'), 0)
+        accuracy = grass_score * 100
+
+        if accuracy > 50:
+            self.status_label.config(text=f"GRASS DETECTED: {accuracy:.2f}%", fg="green")
+        else:
+            self.status_label.config(text=f"NO GRASS DETECTED. (Grass: {accuracy:.2f}%)", fg="red")
+            
+        self.status_label.update_idletasks()
+        
+        # Trigger sike regardless of result
         self.root.after(2000, self.trigger_sike)
 
     def trigger_sike(self):
         self.status_label.config(text="SIKE TOO LATE", fg="red")
         self.status_label.update_idletasks()
-        self.root.update_idletasks()
         
         self.root.after(1500, self.launch_send_message)
 
     def launch_send_message(self):
         self.status_label.config(text="LAUNCHING MESSAGE PROTOCOL...", fg="black")
         self.status_label.update_idletasks()
-        self.root.update_idletasks()
         
         self.root.after(1500, self.load_terminal_interface)
 
