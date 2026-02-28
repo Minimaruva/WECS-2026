@@ -1,19 +1,16 @@
 import tkinter as tk
-# Import the class from your module
 from face_detector.main import DoomscrollApp
-
+from break_timer import BreakApp  # Import the new break module
 
 class MainMenu:
     def __init__(self, root):
         self.root = root
-        self.root.title("App Name") # Change this to your hackathon app name
+        self.root.title("App Name")
         self.root.geometry("500x400")
         
-        # Title Label
         self.title_label = tk.Label(root, text="Anti-Doomscroll", font=("Arial", 32, "bold"))
-        self.title_label.pack(pady=60)
+        self.title_label.pack(pady=40)
         
-        # Big Start Button
         self.start_button = tk.Button(
             root, 
             text="START FOCUS", 
@@ -24,28 +21,43 @@ class MainMenu:
             pady=10,
             command=self.launch_tracker
         )
-        self.start_button.pack(pady=20)
+        self.start_button.pack(pady=10)
+
+        # New Break Button
+        self.break_button = tk.Button(
+            root, 
+            text="START BREAK", 
+            font=("Arial", 20, "bold"), 
+            bg="blue", 
+            fg="white",
+            padx=20,
+            pady=10,
+            command=self.launch_break
+        )
+        self.break_button.pack(pady=10)
 
     def launch_tracker(self):
-        # 1. Hide the main menu
         self.root.withdraw()
-        
-        # 2. Create a secondary window for the tracker
         self.tracker_window = tk.Toplevel(self.root)
-        
-        # 3. Define what happens when the user closes the tracker window
         self.tracker_window.protocol("WM_DELETE_WINDOW", self.on_close_tracker)
-        
-        # 4. Instantiate your existing tracker app inside this new window
         self.app = DoomscrollApp(self.tracker_window)
 
+    def launch_break(self):
+        self.root.withdraw()
+        self.break_window = tk.Toplevel(self.root)
+        self.break_window.protocol("WM_DELETE_WINDOW", self.on_close_break)
+        self.break_app = BreakApp(self.break_window)
+
     def on_close_tracker(self):
-        # Clean up the camera resources properly
         if hasattr(self.app, 'cap') and self.app.cap.isOpened():
             self.app.cap.release()
-            
-        # Destroy the tracker window and unhide the main menu
         self.tracker_window.destroy()
+        self.root.deiconify()
+
+    def on_close_break(self):
+        if hasattr(self.break_app, 'cap') and self.break_app.cap.isOpened():
+            self.break_app.cap.release()
+        self.break_window.destroy()
         self.root.deiconify()
 
 if __name__ == "__main__":

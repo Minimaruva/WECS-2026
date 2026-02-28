@@ -3,13 +3,18 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 from .punisher import Punisher
+import os
+import pygame
+from pomodoro_timer import RizeGlowBar
+from spinningWheel import ChallengeWheel
 
 class DoomscrollApp:
     def __init__(self, window):
         self.is_running = True
         self.window = window
         self.window.title("Doomscroll Blocker")
-        
+        # for sound play in bg
+        pygame.mixer.init()
         # Use OpenCV's Haar Cascade 
         self.face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
@@ -34,7 +39,9 @@ class DoomscrollApp:
 
         self.counter_label = tk.Label(window, text="Distractions: 0", font=("Arial", 18))
         self.counter_label.pack(pady=5)
-        
+        # spinning wheel for challenges if you distract 5 times
+        self.wheel_launched = False
+
         # 2. THEN INITIALIZE CAMERA
         self.cap = None
         self.switch_camera()
@@ -46,15 +53,22 @@ class DoomscrollApp:
         # number of distractions in one session
         self.total_distractions = 0
         
-        self.punisher = Punisher("./media") # Folder with memes/videos for punishment
+        self.punisher = Punisher("./media", window) # Folder with memes/videos for punishment
+        self.pomodoro_window = tk.Toplevel(self.window)
+        self.pomodoro_bar = RizeGlowBar(self.pomodoro_window)
         
         self.update_frame()
     
     def switch_camera(self):
+        self.status_label.config(text="Loading camera...", fg="blue")
+        self.window.update()  # Force UI update
         if self.cap is not None:
             self.cap.release()
         camera_index = int(self.camera_var.get())
-        self.cap = cv2.VideoCapture(camera_index)
+        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.status_label.config(text="Status: Focused", fg="green")
         
     def update_frame(self):
         success, frame = self.cap.read()
@@ -64,7 +78,13 @@ class DoomscrollApp:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
             # Detect faces
-            faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
+            # Detect faces (Stricter: requires more neighbors and a minimum size)
+            faces = self.face_cascade.detectMultiScale(
+                gray, 
+                scaleFactor=1.1, 
+                minNeighbors=6, 
+                minSize=(100, 100)
+            )
             
             # Draw a bounding box around the face
             for (x, y, w, h) in faces:
@@ -73,7 +93,13 @@ class DoomscrollApp:
             # Logic: No face = user looking away
             if len(faces) == 0:
                 self.distraction_frames += 1
-                
+                if self.distraction_frames == 10:  # Just started getting distracted
+                    sus_path = os.path.abspath("face_detector/sus.mp3")
+                    if os.path.exists(sus_path):
+                        pygame.mixer.music.load(sus_path)
+                        pygame.mixer.music.play()
+                    else:
+                        print(f"Warning: sus.mp3 not found at {sus_path}")
                 if self.distraction_frames >= self.threshold:
                     self.is_currently_distracted = True
                     self.status_label.config(text="LOOKING AWAY!", fg="orange")
@@ -93,13 +119,27 @@ class DoomscrollApp:
                     # STOP THE MODULE
                     self.punisher.stop_punishment()
                 
-                self.distraction_frames = 0
+                # SMOOTHING: Decrease the counter gradually instead of dropping to 0 instantly.
+                # It recovers by 2 frames per successful detection so it drops back to normal quickly but not instantly.
+                if self.distraction_frames > 0:
+                    self.distraction_frames = max(0, self.distraction_frames - 2)
                 
                 # Check for absolute failure condition
                 if self.total_distractions >= 5:
                     self.status_label.config(text="WARNING: YOU ARE DOOMSCROLLING!", fg="red", font=("Arial", 24, "bold"))
+                    if not self.wheel_launched:
+                        self.wheel_launched = True
+                        self.launch_wheel()
+            
+            if self.pomodoro_window.winfo_exists():
+                if self.is_currently_distracted:
+                    self.pomodoro_bar.focus_state = "distracted"
+                elif self.distraction_frames > 0:
+                    self.pomodoro_bar.focus_state = "looking_away"
                 else:
-                    self.status_label.config(text="Focused", fg="green", font=("Arial", 24))
+                    self.pomodoro_bar.focus_state = "focused"
+                    
+                self.pomodoro_bar.distractions = self.total_distractions
             
             # Display frame
             img = Image.fromarray(frame_rgb)
@@ -116,6 +156,28 @@ class DoomscrollApp:
         self.is_running = False
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()
+    
+    def launch_wheel(self):
+        self.punisher.stop_punishment()
+        
+        # Stop camera tracking loop and release the camera
+        self.is_running = False
+        if hasattr(self, 'cap') and self.cap and self.cap.isOpened():
+            self.cap.release()
+            
+        # Close the Pomodoro timer
+        if self.pomodoro_window.winfo_exists():
+            self.pomodoro_window.destroy()
+            
+        # Hide the main tracking window (destroying it would also destroy the Toplevel wheel)
+        self.window.withdraw()
+        
+        # Launch the wheel
+        wheel_window = tk.Toplevel(self.window)
+        self.wheel_app = ChallengeWheel(wheel_window)
+        
+        # Ensure closing the wheel window terminates the entire application
+        wheel_window.protocol("WM_DELETE_WINDOW", self.window.destroy)
 
 if __name__ == "__main__":
     root = tk.Tk()
