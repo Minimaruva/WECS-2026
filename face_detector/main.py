@@ -3,13 +3,16 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 from .punisher import Punisher
+import os
+import pygame
 
 class DoomscrollApp:
     def __init__(self, window):
         self.is_running = True
         self.window = window
         self.window.title("Doomscroll Blocker")
-        
+        # for sound play in bg
+        pygame.mixer.init()
         # Use OpenCV's Haar Cascade 
         self.face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
@@ -46,15 +49,20 @@ class DoomscrollApp:
         # number of distractions in one session
         self.total_distractions = 0
         
-        self.punisher = Punisher("./media") # Folder with memes/videos for punishment
+        self.punisher = Punisher("./media", window) # Folder with memes/videos for punishment
         
         self.update_frame()
     
     def switch_camera(self):
+        self.status_label.config(text="Loading camera...", fg="blue")
+        self.window.update()  # Force UI update
         if self.cap is not None:
             self.cap.release()
         camera_index = int(self.camera_var.get())
-        self.cap = cv2.VideoCapture(camera_index)
+        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.status_label.config(text="Status: Focused", fg="green")
         
     def update_frame(self):
         success, frame = self.cap.read()
@@ -73,7 +81,13 @@ class DoomscrollApp:
             # Logic: No face = user looking away
             if len(faces) == 0:
                 self.distraction_frames += 1
-                
+                if self.distraction_frames == 10:  # Just started getting distracted
+                    sus_path = os.path.abspath("face_detector/sus.mp3")
+                    if os.path.exists(sus_path):
+                        pygame.mixer.music.load(sus_path)
+                        pygame.mixer.music.play()
+                    else:
+                        print(f"Warning: sus.mp3 not found at {sus_path}")
                 if self.distraction_frames >= self.threshold:
                     self.is_currently_distracted = True
                     self.status_label.config(text="LOOKING AWAY!", fg="orange")
