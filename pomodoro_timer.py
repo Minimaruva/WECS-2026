@@ -177,22 +177,31 @@ class RizeGlowBar:
         mins, secs = divmod(self.seconds_left, 60)
         time_string = f"{mins:02d}:{secs:02d}"
 
-        if self.is_doomscrolling:
+        if self.focus_state == "distracted":
             if self.root.winfo_y() > self.y_limit + 10:
                 self.snap_to_position(None) 
             
             self.cat_display.config(image=self.img_cat_open)
             self.gauge_display.config(image=self.img_high_cort)
             
-            self.timer_label.config(text="TOUCH GRASS", fg=self.alert_red)
-            self.status_label.config(text="LOSING FOCUS", fg=self.alert_red)
-            self.distract_label.config(fg=self.alert_red)
-        else:
+            self.timer_label.config(text="TOUCH GRASS!!", fg=self.alert_red)
+            self.status_label.config(text="DOOMSCROLLING!!", fg=self.alert_red, font=("Arial", 11, "italic bold"))
+            self.distract_label.config(text=f"distractions: {self.distractions}", fg=self.alert_red)
+            
+        elif self.focus_state == "looking_away":
+            self.cat_display.config(image=self.img_cat_open)
+            self.gauge_display.config(image=self.img_low_cort)
+            
+            self.timer_label.config(text=time_string, fg=self.warn_orange)
+            self.status_label.config(text="LOOKING AWAY...", fg=self.warn_orange, font=("Arial", 11, "bold"))
+            self.distract_label.config(text=f"distractions: {self.distractions}", fg=self.warn_orange)
+            
+        else: # focused
             self.cat_display.config(image=self.img_cat_closed)
             self.gauge_display.config(image=self.img_low_cort)
             
             self.timer_label.config(text=time_string, fg=self.brat_green)
-            self.status_label.config(text="STAY FOCUSED", fg=self.brat_green)
+            self.status_label.config(text="STAY FOCUSED!1!", fg=self.brat_green, font=("Arial", 11, "bold"))
             self.distract_label.config(text=f"distractions: {self.distractions}", fg=self.brat_green)
 
         self.root.after(1000, self.update_timer)

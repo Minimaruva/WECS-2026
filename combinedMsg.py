@@ -31,7 +31,7 @@ class TypeWriterApp:
         self.index = 0
         self.is_typing = False
 
-        self.message_to_crush = "hello :D"
+        self.message_to_crush = "Hi crush :D I failed to focus again..."
 
         # Initial Status
         self.display_system_msg(
