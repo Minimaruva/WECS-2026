@@ -2,6 +2,7 @@ import tkinter as tk
 # Import the class from your module
 from face_detector.main import DoomscrollApp
 
+
 class MainMenu:
     def __init__(self, root):
         self.root = root

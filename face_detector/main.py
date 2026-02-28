@@ -2,6 +2,7 @@ import cv2
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+from .punisher import Punisher
 
 class DoomscrollApp:
     def __init__(self, window):
@@ -24,10 +25,7 @@ class DoomscrollApp:
         camera_dropdown.pack(side=tk.LEFT, padx=5)
         tk.Button(camera_frame, text="Switch", command=self.switch_camera).pack(side=tk.LEFT)
         
-        # Setup UI and Camera
-        self.cap = None
-        self.switch_camera()
-        
+        # 1. SETUP UI FIRST
         self.video_label = tk.Label(window)
         self.video_label.pack(padx=10, pady=10)
         
@@ -37,11 +35,18 @@ class DoomscrollApp:
         self.counter_label = tk.Label(window, text="Distractions: 0", font=("Arial", 18))
         self.counter_label.pack(pady=5)
         
+        # 2. THEN INITIALIZE CAMERA
+        self.cap = None
+        self.switch_camera()
+        
         # State tracking variables
         self.distraction_frames = 0
         self.threshold = 30 # Reduced for faster testing in a hackathon
         self.is_currently_distracted = False
+        # number of distractions in one session
         self.total_distractions = 0
+        
+        self.punisher = Punisher("./media") # Folder with memes/videos for punishment
         
         self.update_frame()
     
@@ -72,6 +77,9 @@ class DoomscrollApp:
                 if self.distraction_frames >= self.threshold:
                     self.is_currently_distracted = True
                     self.status_label.config(text="LOOKING AWAY!", fg="orange")
+
+                    # TRIGGER THE NEW MODULE
+                    self.punisher.start_punishment()
                 else:
                     self.status_label.config(text=f"Losing focus... {self.distraction_frames}/{self.threshold}", fg="gray")
                     
@@ -81,6 +89,9 @@ class DoomscrollApp:
                     self.total_distractions += 1
                     self.counter_label.config(text=f"Distractions: {self.total_distractions}")
                     self.is_currently_distracted = False
+
+                    # STOP THE MODULE
+                    self.punisher.stop_punishment()
                 
                 self.distraction_frames = 0
                 
