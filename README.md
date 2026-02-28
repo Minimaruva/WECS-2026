@@ -11,7 +11,7 @@ A gamified productivity app that uses face detection and biological feedback pri
 
 **Tech stack:** Python + OpenCV face detection + Tkinter GUI + Telegram bot for social accountability.
 
-**The catch:** It will spam you mercilessly and text your crush if you fail. You've been warned. 🚨
+**The catch:** It will spam you mercilessly and text your crush if you fail. You've been warned.
 
 ---
 
