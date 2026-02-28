@@ -3,6 +3,18 @@
 
 A gamified productivity app that uses face detection and biological feedback principles to combat doomscrolling and maintain focus during work sessions.
 
+## TL;DR
+
+**What it does:** Watches your face with a webcam. Look away = annoying popups + sounds. Stay distracted too long = forced break with physical challenges.
+
+**Why it works:** Uses your body's natural stress/reward systems (cortisol vs dopamine) to make distraction painful and exercise rewarding.
+
+**Tech stack:** Python + OpenCV face detection + Tkinter GUI + Telegram bot for social accountability.
+
+**The catch:** It will spam you mercilessly and text your crush if you fail. You've been warned. 🚨
+
+---
+
 ## Biological Inspiration
 
 We designed app with two biological brain mechanisms in mind:
