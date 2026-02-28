@@ -6,6 +6,7 @@ from .punisher import Punisher
 import os
 import pygame
 from pomodoro_timer import RizeGlowBar
+from spinningWheel import ChallengeWheel
 
 class DoomscrollApp:
     def __init__(self, window):
@@ -38,7 +39,9 @@ class DoomscrollApp:
 
         self.counter_label = tk.Label(window, text="Distractions: 0", font=("Arial", 18))
         self.counter_label.pack(pady=5)
-        
+        # spinning wheel for challenges if you distract 5 times
+        self.wheel_launched = False
+
         # 2. THEN INITIALIZE CAMERA
         self.cap = None
         self.switch_camera()
@@ -115,8 +118,9 @@ class DoomscrollApp:
                 # Check for absolute failure condition
                 if self.total_distractions >= 5:
                     self.status_label.config(text="WARNING: YOU ARE DOOMSCROLLING!", fg="red", font=("Arial", 24, "bold"))
-                else:
-                    self.status_label.config(text="Focused", fg="green", font=("Arial", 24))
+                    if not self.wheel_launched:
+                        self.wheel_launched = True
+                        self.launch_wheel()
             
             if self.pomodoro_window.winfo_exists():
                 if self.is_currently_distracted:
@@ -143,6 +147,28 @@ class DoomscrollApp:
         self.is_running = False
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()
+    
+    def launch_wheel(self):
+        self.punisher.stop_punishment()
+        
+        # Stop camera tracking loop and release the camera
+        self.is_running = False
+        if hasattr(self, 'cap') and self.cap and self.cap.isOpened():
+            self.cap.release()
+            
+        # Close the Pomodoro timer
+        if self.pomodoro_window.winfo_exists():
+            self.pomodoro_window.destroy()
+            
+        # Hide the main tracking window (destroying it would also destroy the Toplevel wheel)
+        self.window.withdraw()
+        
+        # Launch the wheel
+        wheel_window = tk.Toplevel(self.window)
+        self.wheel_app = ChallengeWheel(wheel_window)
+        
+        # Ensure closing the wheel window terminates the entire application
+        wheel_window.protocol("WM_DELETE_WINDOW", self.window.destroy)
 
 if __name__ == "__main__":
     root = tk.Tk()
