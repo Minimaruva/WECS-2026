@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 
 class DoomscrollApp:
     def __init__(self, window):
+        self.is_running = True
         self.window = window
         self.window.title("Doomscroll Blocker")
         
@@ -17,7 +18,7 @@ class DoomscrollApp:
         camera_frame = tk.Frame(window)
         camera_frame.pack(pady=5)
         tk.Label(camera_frame, text="Camera:").pack(side=tk.LEFT)
-        self.camera_var = tk.StringVar(value="0")
+        self.camera_var = tk.StringVar(value="1")
         camera_dropdown = ttk.Combobox(camera_frame, textvariable=self.camera_var, 
                                        values=["0", "1", "2", "3"], width=5)
         camera_dropdown.pack(side=tk.LEFT, padx=5)
@@ -60,7 +61,7 @@ class DoomscrollApp:
             # Detect faces
             faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
             
-            # Draw a bounding box around the face (Mesh is impossible with Haar)
+            # Draw a bounding box around the face
             for (x, y, w, h) in faces:
                 cv2.rectangle(frame_rgb, (x, y), (x+w, y+h), (0, 255, 0), 2)
             
@@ -72,7 +73,6 @@ class DoomscrollApp:
                     self.is_currently_distracted = True
                     self.status_label.config(text="LOOKING AWAY!", fg="orange")
                 else:
-                    # Provide feedback that they are losing focus
                     self.status_label.config(text=f"Losing focus... {self.distraction_frames}/{self.threshold}", fg="gray")
                     
             else:
@@ -96,9 +96,13 @@ class DoomscrollApp:
             self.video_label.imgtk = imgtk
             self.video_label.configure(image=imgtk)
         
-        self.window.after(15, self.update_frame)
+        # Un-indented to ensure the loop continues even if a frame drops
+        if self.is_running:
+            self.window.after(15, self.update_frame)    
 
+    # Corrected indentation here
     def __del__(self):
+        self.is_running = False
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()
 
