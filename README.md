@@ -44,6 +44,8 @@ The app encourages "touching grass" (literally going outside) because:
 - Breaking the screen-time cycle prevents digital fatigue
 - Real-world interaction provides genuine dopamine (not the fake hits from doomscrolling)
 
+---
+
 ## 🎮 Features
 
 ### 1. **Focus Tracker** (main.py)
@@ -93,13 +95,6 @@ After 5 distractions, you must:
 
 > **Note**: Requires Telegram Bot API token and chat ID in .env file
 
-## Why This Works (The Science)
-
-### The Dopamine Problem
-Doomscrolling hijacks your brain's reward system:
-- Infinite scroll = unpredictable rewards
-- Each refresh = potential dopamine hit
-- Your brain gets addicted to the *possibility* of interesting content
 
 ### Our Solution
 1. **Make distraction painful** (negative feedback)
