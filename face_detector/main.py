@@ -78,7 +78,7 @@ class DoomscrollApp:
         dialog.geometry(f"+{x}+{y}")
         
         message = tk.Label(dialog, 
-                           text="YOU ARE DOOMSCROLLING!\n\nTAKE A BREAK OR SUFFER.",
+                           text="You are getting distracted!\n\nConsider taking a break or do the challenge!",
                            font=("Arial", 16, "bold"), bg="#8ACE00", fg="black", justify="center")
         message.pack(pady=30)
         

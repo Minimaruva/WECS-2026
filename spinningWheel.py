@@ -1,30 +1,29 @@
 import tkinter as tk
 import math
 import random
+import cv2
+from PIL import Image, ImageTk
 from combinedMsg import TypeWriterApp
-
 
 class ChallengeWheel:
     def __init__(self, root):
         self.root = root
         self.root.title("Challenge Spinner")
-        self.root.geometry("500x600")
+        self.root.geometry("500x700")
         self.root.configure(bg="#8ACE00")
-
         self.root.overrideredirect(True)
         
-        # Universal Escape key bind to close the app
-        self.root.bind("<Escape>", lambda e: self.root.destroy())
+        # Universal Escape key bind to close the app safely
+        self.root.bind("<Escape>", lambda e: self.close_app())
 
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-        width, height = 500, 600
+        width, height = 500, 700
         x = (screen_width // 2) - (width // 2)
         y = (screen_height // 2) - (height // 2)
         self.root.geometry(f"{width}x{height}+{x}+{y}")
 
-        # Close button for the main wheel interface
-        self.close_btn = tk.Button(root, text="X", font=("Arial", 14, "bold"), bg="#8ACE00", fg="black", bd=0, command=self.root.destroy)
+        self.close_btn = tk.Button(root, text="X", font=("Arial", 14, "bold"), bg="#8ACE00", fg="black", bd=0, command=self.close_app)
         self.close_btn.place(x=460, y=10)
 
         self.challenges = ["touch grass", "shower", "exercise"]
@@ -33,19 +32,16 @@ class ChallengeWheel:
         self.speed = 0
         self.is_spinning = False
 
-        self.canvas = tk.Canvas(
-            root, width=400, height=400, bg="#8ACE00", highlightthickness=0)
+        self.canvas = tk.Canvas(root, width=400, height=400, bg="#8ACE00", highlightthickness=0)
         self.canvas.pack(pady=40)
 
-        self.canvas.create_polygon(
-            380, 200, 400, 180, 400, 220, fill="red", tags="pointer")
+        self.canvas.create_polygon(380, 200, 400, 180, 400, 220, fill="red", tags="pointer")
 
         self.spin_btn = tk.Button(root, text="SPIN", font=("Arial", 20, "bold"),
                                   command=self.start_spin, bg="black", fg="#8ACE00")
         self.spin_btn.pack(pady=10)
 
-        self.result_label = tk.Label(
-            root, text="Press Spin", font=("Arial", 18), bg="#8ACE00")
+        self.result_label = tk.Label(root, text="Press Spin", font=("Arial", 18), bg="#8ACE00")
         self.result_label.pack(pady=10)
 
         self.draw_wheel()
@@ -74,12 +70,9 @@ class ChallengeWheel:
         if not self.is_spinning:
             num_slices = len(self.challenges)
             slice_angle = 360 / num_slices
-
-            # Hardcoded to 0 for the rigged "touch grass" outcome
             target_idx = 0
             random_offset = random.uniform(5, slice_angle-5)
-            target_final_angle = (
-                360 - (target_idx * slice_angle) - random_offset)
+            target_final_angle = (360 - (target_idx * slice_angle) - random_offset)
 
             current_angle_mod = self.angle % 360
             dist_to_travel = (target_final_angle - current_angle_mod)
@@ -104,8 +97,7 @@ class ChallengeWheel:
     def determine_winner(self):
         num_slices = len(self.challenges)
         slice_angle = 360 / num_slices
-        winning_index = int(
-            ((360 - (self.angle % 360)) / slice_angle) % num_slices)
+        winning_index = int(((360 - (self.angle % 360)) / slice_angle) % num_slices)
         result = self.challenges[winning_index]
         self.result_label.config(text=f"CHALLENGE: {result}")
         
@@ -116,29 +108,52 @@ class ChallengeWheel:
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        # Re-add close button for this view
-        self.close_btn = tk.Button(self.root, text="X", font=("Arial", 14, "bold"), bg="#8ACE00", fg="black", bd=0, command=self.root.destroy)
+        self.close_btn = tk.Button(self.root, text="X", font=("Arial", 14, "bold"), bg="#8ACE00", fg="black", bd=0, command=self.close_app)
         self.close_btn.place(x=460, y=10)
 
-        tk.Label(self.root, text="TOUCH GRASS", font=("Arial", 40, "bold", "italic"), bg="#8ACE00", fg="black").pack(pady=20)
+        tk.Label(self.root, text="TOUCH GRASS", font=("Arial", 32, "bold", "italic"), bg="#8ACE00", fg="black").pack(pady=10)
 
         self.timer_sec = 0
-        self.timer_label = tk.Label(self.root, text="00:00", font=("Arial", 36, "bold"), bg="#8ACE00", fg="black")
+        self.timer_label = tk.Label(self.root, text="00:00", font=("Arial", 28, "bold"), bg="#8ACE00", fg="black")
         self.timer_label.pack(pady=5)
 
-        self.cam_frame = tk.Frame(self.root, width=400, height=250, bg="black")
+        # Camera Frame Setup
+        self.cam_frame = tk.Frame(self.root, width=400, height=280, bg="black")
         self.cam_frame.pack(pady=10)
         self.cam_frame.pack_propagate(False)
-        tk.Label(self.cam_frame, text="[ CAMERA FEED DUMMY ]", font=("Arial", 16, "bold"), bg="black", fg="#8ACE00").place(relx=0.5, rely=0.5, anchor="center")
+        
+        self.video_label = tk.Label(self.cam_frame, bg="black")
+        self.video_label.pack(expand=True, fill="both")
 
-        self.capture_btn = tk.Button(self.root, text="TAKE PICTURE", font=("Arial", 20, "bold"), bg="black", fg="#8ACE00", command=self.take_picture)
-        self.capture_btn.pack(pady=15)
+        self.capture_btn = tk.Button(self.root, text="TAKE PICTURE", font=("Arial", 18, "bold"), bg="black", fg="#8ACE00", command=self.take_picture)
+        self.capture_btn.pack(pady=10)
 
-        self.status_label = tk.Label(self.root, text="", font=("Arial", 22, "bold"), bg="#8ACE00", fg="red")
+        self.status_label = tk.Label(self.root, text="Ready to capture...", font=("Arial", 16, "bold"), bg="#8ACE00", fg="black", wraplength=450)
         self.status_label.pack(pady=10)
+
+        # Initialize Camera
+        self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        self.camera_running = True
+        self.update_camera_frame()
 
         self.timer_running = True
         self.update_timer()
+
+    def update_camera_frame(self):
+        if not self.camera_running:
+            return
+            
+        success, frame = self.cap.read()
+        if success:
+            frame = cv2.flip(frame, 1)
+            frame = cv2.resize(frame, (400, 280)) # Resize to fit frame
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame_rgb)
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.video_label.imgtk = imgtk
+            self.video_label.configure(image=imgtk)
+            
+        self.root.after(15, self.update_camera_frame)
 
     def update_timer(self):
         if not self.timer_running:
@@ -150,29 +165,56 @@ class ChallengeWheel:
 
     def take_picture(self):
         self.timer_running = False
+        self.camera_running = False # Freezes the last frame on screen
         self.capture_btn.config(state=tk.DISABLED)
-        self.status_label.config(text="GRASS DETECTED...", fg="black")
-        self.root.after(1500, self.trigger_sike)
+        
+        self.status_label.config(text="ANALYZING IMAGE...", fg="blue")
+        self.status_label.update_idletasks()
+        self.root.update_idletasks()
+        
+        self.root.after(1500, self.display_fake_percentage)
+
+    def display_fake_percentage(self):
+        accuracy = random.uniform(90.12, 97.67)
+        self.status_label.config(text=f"GRASS DETECTED: {accuracy:.2f}%", fg="green")
+        self.status_label.update_idletasks()
+        self.root.update_idletasks()
+        
+        self.root.after(2000, self.trigger_sike)
 
     def trigger_sike(self):
         self.status_label.config(text="SIKE TOO LATE", fg="red")
+        self.status_label.update_idletasks()
+        self.root.update_idletasks()
+        
         self.root.after(1500, self.launch_send_message)
 
     def launch_send_message(self):
         self.status_label.config(text="LAUNCHING MESSAGE PROTOCOL...", fg="black")
+        self.status_label.update_idletasks()
+        self.root.update_idletasks()
+        
         self.root.after(1500, self.load_terminal_interface)
 
     def load_terminal_interface(self):
+        self.release_camera()
+        
         for widget in self.root.winfo_children():
             widget.destroy()
         
-        # Instantiate the imported app
         app = TypeWriterApp(self.root)
         
-        # Add a close button specifically for the terminal geometry
-        term_close_btn = tk.Button(self.root, text="X", font=("Arial", 14, "bold"), bg="black", fg="#8ACE00", bd=0, command=self.root.destroy)
+        term_close_btn = tk.Button(self.root, text="X", font=("Arial", 14, "bold"), bg="black", fg="#8ACE00", bd=0, command=self.close_app)
         term_close_btn.place(x=560, y=10)
 
+    def release_camera(self):
+        self.camera_running = False
+        if hasattr(self, 'cap') and self.cap.isOpened():
+            self.cap.release()
+
+    def close_app(self):
+        self.release_camera()
+        self.root.destroy()
 
 if __name__ == "__main__":
     root = tk.Tk()

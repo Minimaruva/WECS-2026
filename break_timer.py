@@ -66,10 +66,13 @@ class BreakApp:
 
         self.current_gif_frame = 0
 
+        self.is_running = True
         self.update_timer()
         self.update_media()
 
     def update_timer(self):
+        if not self.window.winfo_exists():
+            return
         if self.time_left > 0:
             mins, secs = divmod(self.time_left, 60)
             self.timer_label.config(text=f"{mins:02d}:{secs:02d}")
@@ -79,7 +82,7 @@ class BreakApp:
             self.timer_label.config(text="BREAK OVER!", fg="red")
 
     def update_media(self):
-        if not self.window.winfo_exists():
+        if not self.window.winfo_exists() or not self.is_running:
             return
 
         if hasattr(self, 'cap') and self.cap.isOpened():
@@ -129,7 +132,15 @@ class BreakApp:
             self.gif_label.configure(image=self.gif_frames[self.current_gif_frame])
             self.current_gif_frame = (self.current_gif_frame + 1) % len(self.gif_frames)
 
-        self.window.after(33, self.update_media)
+        if self.is_running:
+            self.window.after(33, self.update_media)
+
+    def cleanup(self):
+        self.is_running = False
+        if hasattr(self, 'cap') and self.cap and self.cap.isOpened():
+            self.cap.release()
+        if hasattr(self, 'video_cap') and self.has_video and self.video_cap.isOpened():
+            self.video_cap.release()
 
     def __del__(self):
         if hasattr(self, 'cap') and self.cap.isOpened():

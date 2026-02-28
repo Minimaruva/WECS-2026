@@ -10,8 +10,8 @@ load_dotenv()
 TOKEN = os.environ.get("TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 
-print(TOKEN)
-print(CHAT_ID)
+# print(TOKEN)
+# print(CHAT_ID)
 
 
 class TypeWriterApp:
@@ -56,18 +56,26 @@ class TypeWriterApp:
     def send_telegram_msg(self, text):
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={CHAT_ID}&text={text}"
         try:
-            threading.Thread(target=lambda: requests.get(url)).start()
+            threading.Thread(target=lambda: requests.get(url, timeout=5), daemon=True).start()
         except Exception as e:
             print(f"Error sending: {e}")
 
     def check_for_updates(self):
-        if not self.is_running: # FIX: Abort if window is closed
+        if not self.is_running or not self.root.winfo_exists():
+            return
+            
+        # Run network request in background thread to avoid UI freeze
+        threading.Thread(target=self._fetch_updates, daemon=True).start()
+
+    def _fetch_updates(self):
+        """Background thread method for fetching Telegram updates"""
+        if not self.is_running:
             return
             
         print("[DEBUG] polling update")
         url = f"https://api.telegram.org/bot{TOKEN}/getUpdates"
         try:
-            response = requests.get(url).json()
+            response = requests.get(url, timeout=5).json()
             if response.get("result"):
                 last_msg = response["result"][-1]
                 
@@ -79,7 +87,8 @@ class TypeWriterApp:
                 
                 # Skip if there is no text (e.g., it's a photo)
                 if not text:
-                    self.root.after(3000, self.check_for_updates)
+                    if self.is_running:
+                        self.root.after(3000, self.check_for_updates)
                     return
 
                 new_content = f"\n> Message from {sender}: {text}"
@@ -87,14 +96,17 @@ class TypeWriterApp:
                     self.content = new_content
                     self.index = 0
                     self.is_typing = True
-                    self.type_character()
+                    self.root.after(0, self.type_character)
                 else:
-                    self.root.after(3000, self.check_for_updates)
+                    if self.is_running:
+                        self.root.after(3000, self.check_for_updates)
             else:
-                self.root.after(300, self.check_for_updates)
+                if self.is_running:
+                    self.root.after(3000, self.check_for_updates)
         except Exception as e:
-            self.display_system_msg("CONNECTION ERROR. RETRYING...")
-            self.root.after(5000, self.check_for_updates)
+            if self.is_running:
+                self.root.after(0, lambda: self.display_system_msg("CONNECTION ERROR. RETRYING..."))
+                self.root.after(5000, self.check_for_updates)
 
         print("[DEBUG] finished polling update")
 
@@ -107,11 +119,13 @@ class TypeWriterApp:
             self.text_area.insert(tk.END, char)
             self.text_area.see(tk.END)
             self.index += 1
-            self.root.after(50, self.type_character)
+            if self.is_running:
+                self.root.after(50, self.type_character)
         else:
             print("[DEBUG] FINISHED TYPING")
             self.is_typing = False
-            self.check_for_updates()
+            if self.is_running:
+                self.check_for_updates()
 
 
 if __name__ == "__main__":

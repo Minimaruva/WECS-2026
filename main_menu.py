@@ -64,10 +64,7 @@ class MainMenu:
 
     def on_close_break(self):
         if hasattr(self, 'break_app'):
-            if hasattr(self.break_app, 'cap') and self.break_app.cap and self.break_app.cap.isOpened():
-                self.break_app.cap.release()
-            if hasattr(self.break_app, 'video_cap') and self.break_app.has_video and self.break_app.video_cap.isOpened():
-                self.break_app.video_cap.release()
+            self.break_app.cleanup()
         if hasattr(self, 'break_window') and self.break_window.winfo_exists():
             self.break_window.destroy()
         self.root.deiconify()
