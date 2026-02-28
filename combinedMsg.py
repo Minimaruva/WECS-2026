@@ -86,7 +86,7 @@ class TypeWriterApp:
                 sender = sender_data.get("first_name", "Crush")
                 
                 # Skip if there is no text (e.g., it's a photo)
-                if not text:
+                if not text or "WAIT" in text:
                     if self.is_running:
                         self.root.after(3000, self.check_for_updates)
                     return
@@ -113,6 +113,8 @@ class TypeWriterApp:
     def type_character(self):
         if not self.is_running: # FIX: Stop typing if window closed
             return
+        # if "WAIT" in self.content:
+        #     return
             
         if self.index < len(self.content):
             char = self.content[self.index]
