@@ -5,9 +5,6 @@ import os
 from dotenv import load_dotenv
 
 # --- CONFIGURATION ---
-# TOKEN = "8789087510:AAGu0gMYYTgUPxX4SfT2rJxVVxt3vclbNwA"
-# CHAT_ID = "8573264788"
-
 load_dotenv()
 TOKEN = os.environ.get("TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
