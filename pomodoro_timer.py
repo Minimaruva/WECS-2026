@@ -8,6 +8,8 @@ class RizeGlowBar:
         self.brat_green = "#8ACE00"
         self.bg_black = "#000000" 
         self.alert_red = "#FF0000"
+        self.warn_orange = "#FF4500"
+        
         
         # --- 2. Screen & Logic Setup ---
         self.screen_width = self.root.winfo_screenwidth()
@@ -19,7 +21,8 @@ class RizeGlowBar:
         
         self.seconds_left = 25 * 60
         self.distractions = 0
-        self.is_doomscrolling = False 
+        # self.is_doomscrolling = False 
+        self.focus_state = "focused"
         
         # --- 3. Window Setup ---
         self.root.geometry(f"{self.screen_width}x{self.bar_height}+0+{self.y_limit}")
@@ -86,22 +89,49 @@ class RizeGlowBar:
             self.root.config(bg=self.bg_black)
             self.main_frame.pack(expand=True, fill="both", padx=20)
 
+    # def update_timer(self):
+    #     if not self.is_doomscrolling and self.seconds_left > 0:
+    #         self.seconds_left -= 1
+        
+    #     mins, secs = divmod(self.seconds_left, 60)
+    #     time_string = f"{mins:02d}:{secs:02d}"
+
+    #     if self.is_doomscrolling:
+    #         # If hidden, snap up immediately
+    #         if self.root.winfo_y() > self.y_limit + 10:
+    #             self.snap_to_position(None) 
+            
+    #         self.timer_label.config(text="TOUCH GRASS!!", fg=self.alert_red)
+    #         self.status_label.config(text="LOSING FOCUS!!", fg=self.alert_red, font=("Arial", 11, "italic bold"))
+    #         self.distract_label.config(text=f"distractions: {self.distractions}", fg=self.alert_red)
+    #     else:
+    #         self.timer_label.config(text=time_string, fg=self.brat_green)
+    #         self.status_label.config(text="STAY FOCUSED!1!", fg=self.brat_green, font=("Arial", 11, "bold"))
+    #         self.distract_label.config(text=f"distractions: {self.distractions}", fg=self.brat_green)
+
+    #     self.root.after(1000, self.update_timer)
+
     def update_timer(self):
-        if not self.is_doomscrolling and self.seconds_left > 0:
+        if self.focus_state != "distracted" and self.seconds_left > 0:
             self.seconds_left -= 1
         
         mins, secs = divmod(self.seconds_left, 60)
         time_string = f"{mins:02d}:{secs:02d}"
 
-        if self.is_doomscrolling:
-            # If hidden, snap up immediately
+        if self.focus_state == "distracted":
             if self.root.winfo_y() > self.y_limit + 10:
                 self.snap_to_position(None) 
             
             self.timer_label.config(text="TOUCH GRASS!!", fg=self.alert_red)
-            self.status_label.config(text="LOSING FOCUS!!", fg=self.alert_red, font=("Arial", 11, "italic bold"))
+            self.status_label.config(text="DOOMSCROLLING!!", fg=self.alert_red, font=("Arial", 11, "italic bold"))
             self.distract_label.config(text=f"distractions: {self.distractions}", fg=self.alert_red)
-        else:
+            
+        elif self.focus_state == "looking_away":
+            self.timer_label.config(text=time_string, fg=self.warn_orange)
+            self.status_label.config(text="LOOKING AWAY...", fg=self.warn_orange, font=("Arial", 11, "bold"))
+            self.distract_label.config(text=f"distractions: {self.distractions}", fg=self.warn_orange)
+            
+        else: # focused
             self.timer_label.config(text=time_string, fg=self.brat_green)
             self.status_label.config(text="STAY FOCUSED!1!", fg=self.brat_green, font=("Arial", 11, "bold"))
             self.distract_label.config(text=f"distractions: {self.distractions}", fg=self.brat_green)

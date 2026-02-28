@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 from .punisher import Punisher
 import os
 import pygame
+from pomodoro_timer import RizeGlowBar
 
 class DoomscrollApp:
     def __init__(self, window):
@@ -50,6 +51,8 @@ class DoomscrollApp:
         self.total_distractions = 0
         
         self.punisher = Punisher("./media", window) # Folder with memes/videos for punishment
+        self.pomodoro_window = tk.Toplevel(self.window)
+        self.pomodoro_bar = RizeGlowBar(self.pomodoro_window)
         
         self.update_frame()
     
@@ -114,6 +117,16 @@ class DoomscrollApp:
                     self.status_label.config(text="WARNING: YOU ARE DOOMSCROLLING!", fg="red", font=("Arial", 24, "bold"))
                 else:
                     self.status_label.config(text="Focused", fg="green", font=("Arial", 24))
+            
+            if self.pomodoro_window.winfo_exists():
+                if self.is_currently_distracted:
+                    self.pomodoro_bar.focus_state = "distracted"
+                elif self.distraction_frames > 0:
+                    self.pomodoro_bar.focus_state = "looking_away"
+                else:
+                    self.pomodoro_bar.focus_state = "focused"
+                    
+                self.pomodoro_bar.distractions = self.total_distractions
             
             # Display frame
             img = Image.fromarray(frame_rgb)

@@ -192,4 +192,4 @@ class Punisher:
             file_index = (file_index + 1) % len(files)
             
             # Delay before opening the next file
-            time.sleep(0.5)
+            time.sleep(0.7)
