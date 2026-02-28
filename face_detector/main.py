@@ -78,7 +78,13 @@ class DoomscrollApp:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
             # Detect faces
-            faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
+            # Detect faces (Stricter: requires more neighbors and a minimum size)
+            faces = self.face_cascade.detectMultiScale(
+                gray, 
+                scaleFactor=1.1, 
+                minNeighbors=6, 
+                minSize=(100, 100)
+            )
             
             # Draw a bounding box around the face
             for (x, y, w, h) in faces:
@@ -113,7 +119,10 @@ class DoomscrollApp:
                     # STOP THE MODULE
                     self.punisher.stop_punishment()
                 
-                self.distraction_frames = 0
+                # SMOOTHING: Decrease the counter gradually instead of dropping to 0 instantly.
+                # It recovers by 2 frames per successful detection so it drops back to normal quickly but not instantly.
+                if self.distraction_frames > 0:
+                    self.distraction_frames = max(0, self.distraction_frames - 2)
                 
                 # Check for absolute failure condition
                 if self.total_distractions >= 5:
